@@ -14,3 +14,4 @@ class Shop:
         self.inventory = Inventory(runtime, telemetry, self.connect)
         self.orders = Orders(runtime, telemetry, self.inventory)
         self.web = Web(runtime, telemetry, self.orders, self.inventory)
+        runtime.spawn(self.inventory.report_pool())

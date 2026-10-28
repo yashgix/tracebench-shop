@@ -26,6 +26,12 @@ class Inventory:
             finally:
                 self.pool.release(connection)
 
+    async def report_pool(self):
+        while self.running:
+            self.telemetry.gauge(SERVICE, "db.client.connections.usage", self.pool.in_use)
+            self.telemetry.gauge(SERVICE, "db.client.connections.pending_requests", self.pool.waiting)
+            await self.runtime.sleep(config.POOL_REPORT_MS)
+
     async def _connection(self):
         try:
             return await self.pool.acquire()
