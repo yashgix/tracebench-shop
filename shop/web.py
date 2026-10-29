@@ -13,6 +13,9 @@ class Web:
     async def checkout(self, user, sku, quantity):
         return await self._serve("POST /checkout", "orders", "POST /orders", self.orders.place, user, sku, quantity)
 
+    async def product(self, sku):
+        return await self._serve("GET /products/{sku}", "inventory", "GET /stock/{sku}", self.inventory.stock, sku)
+
     async def _serve(self, route, target, name, handler, *args):
         with self.telemetry.span(SERVICE, route) as span:
             try:

@@ -15,6 +15,10 @@ class CheckoutTest(unittest.TestCase):
         self.assertEqual(run(app.runtime, app.web.checkout("u1", "sku-1", 2)), 409)
         self.assertEqual(app.orders.placed, 0)
 
+    def test_unknown_product_is_not_found(self):
+        app = shop()
+        self.assertEqual(run(app.runtime, app.web.product("nope")), 404)
+
     def test_one_trace_per_request(self):
         app = shop()
         run(app.runtime, app.web.checkout("u1", "sku-1", 1))

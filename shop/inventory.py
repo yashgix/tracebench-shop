@@ -13,6 +13,14 @@ class Inventory:
         self.pool = Pool(runtime, connect, config.POOL_SIZE, config.POOL_TIMEOUT_MS)
         self.running = True
 
+    async def stock(self, sku):
+        with self.telemetry.span(SERVICE, "GET /stock/{sku}", sku=sku):
+            connection = await self._connection()
+            try:
+                return await self._read_stock(connection, sku)
+            finally:
+                self.pool.release(connection)
+
     async def reserve(self, sku, quantity):
         with self.telemetry.span(SERVICE, "POST /reserve", sku=sku, quantity=quantity):
             connection = await self._connection()
