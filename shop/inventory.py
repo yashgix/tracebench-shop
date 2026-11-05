@@ -24,15 +24,17 @@ class Inventory:
     async def reserve(self, sku, quantity):
         with self.telemetry.span(SERVICE, "POST /reserve", sku=sku, quantity=quantity):
             connection = await self._connection()
-            try:
-                stock = await self._read_stock(connection, sku)
-                if stock < quantity:
-                    raise ServiceError(409, f"out of stock: {sku}")
-                connection.execute("UPDATE items SET stock = stock - ? WHERE sku = ?", (quantity, sku))
-                await self.runtime.sleep(config.QUERY_MS)
-                return stock - quantity
-            finally:
-                self.pool.release(connection)
+            stock = await self._read_stock(connection, sku)
+            self._check_available(sku, stock, quantity)
+            connection.execute("UPDATE items SET stock = stock - ? WHERE sku = ?", (quantity, sku))
+            await self.runtime.sleep(config.QUERY_MS)
+            self.pool.release(connection)
+            return stock - quantity
+
+    @staticmethod
+    def _check_available(sku, stock, quantity):
+        if stock < quantity:
+            raise ServiceError(409, f"out of stock: {sku}")
 
     async def report_pool(self):
         while self.running:
