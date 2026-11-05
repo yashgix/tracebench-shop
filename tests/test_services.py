@@ -19,6 +19,17 @@ class CheckoutTest(unittest.TestCase):
         app = shop()
         self.assertEqual(run(app.runtime, app.web.product("nope")), 404)
 
+    def test_a_user_over_the_limit_is_slowed_down(self):
+        app, statuses = shop({"sku-1": 100}), []
+
+        async def buy():
+            statuses.append(await app.web.checkout("u1", "sku-1", 1))
+
+        for _ in range(6):
+            app.runtime.spawn(buy())
+        app.runtime.run(1_000)
+        self.assertEqual(sorted(statuses), [200] * 5 + [503])
+
     def test_one_trace_per_request(self):
         app = shop()
         run(app.runtime, app.web.checkout("u1", "sku-1", 1))
