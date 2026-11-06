@@ -30,6 +30,15 @@ class CheckoutTest(unittest.TestCase):
         app.runtime.run(1_000)
         self.assertEqual(sorted(statuses), [200] * 5 + [503])
 
+    def test_a_slow_upstream_times_out(self):
+        app = shop()
+
+        async def stuck(sku):
+            await app.runtime.sleep(60_000)
+
+        app.web.inventory.stock = stuck
+        self.assertEqual(run(app.runtime, app.web.product("sku-1"), until=5_000), 502)
+
     def test_one_trace_per_request(self):
         app = shop()
         run(app.runtime, app.web.checkout("u1", "sku-1", 1))

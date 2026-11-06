@@ -39,7 +39,8 @@ class Web:
     async def _serve(self, route, target, name, handler, *args):
         with self.telemetry.span(SERVICE, route) as span:
             try:
-                await call(self.runtime, self.telemetry, SERVICE, target, name, handler, *args)
+                await call(self.runtime, self.telemetry, SERVICE, target, name, handler, *args,
+                           timeout_ms=config.UPSTREAM_TIMEOUT_MS)
                 status = 200
             except ServiceError as exc:
                 status = exc.status if exc.status < 500 else 502
