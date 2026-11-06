@@ -1,5 +1,6 @@
 """Orders service: places an order by reserving stock in inventory."""
 
+from . import config
 from .rpc import ServiceError, call
 
 SERVICE = "orders"
@@ -12,6 +13,8 @@ class Orders:
 
     async def place(self, user, sku, quantity):
         with self.telemetry.span(SERVICE, "POST /orders", user=user, sku=sku):
+            if quantity > config.MAX_ORDER_ITEMS:
+                raise ValueError(f"at most {config.MAX_ORDER_ITEMS} items per order")
             try:
                 await call(self.runtime, self.telemetry, SERVICE, "inventory", "POST /reserve",
                            self.inventory.reserve, sku, quantity)
