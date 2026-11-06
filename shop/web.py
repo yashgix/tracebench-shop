@@ -44,7 +44,7 @@ class Web:
             except ServiceError as exc:
                 status = exc.status if exc.status < 500 else 502
                 if status >= 500:
-                    self.telemetry.log(SERVICE, "ERROR", f"{route} failed: upstream {target} returned {exc.status}")
+                    self.telemetry.log(SERVICE, "ERROR", f"{route} failed: {target} {name} returned {exc.status}")
             span["attributes"]["http.status_code"] = status
             if status >= 500:
                 span["status"] = "ERROR"
