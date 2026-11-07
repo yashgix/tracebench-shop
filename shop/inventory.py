@@ -1,6 +1,8 @@
 """Inventory service: stock levels, reservations, and the database pool."""
 
-from . import config
+import sqlite3
+
+from . import config, db
 from .pool import Pool, PoolTimeout
 from .rpc import ServiceError
 
@@ -27,8 +29,7 @@ class Inventory:
             try:
                 stock = await self._read_stock(connection, sku)
                 self._check_available(sku, stock, quantity)
-                connection.execute("UPDATE items SET stock = stock - ? WHERE sku = ?", (quantity, sku))
-                await self.runtime.sleep(config.QUERY_MS)
+                await self._query(connection, "UPDATE items SET stock = stock - ? WHERE sku = ?", (quantity, sku))
                 return stock - quantity
             finally:
                 self.pool.release(connection)
@@ -51,9 +52,15 @@ class Inventory:
             self.telemetry.log(SERVICE, "ERROR", f"database pool: {exc}")
             raise ServiceError(503, "database unavailable") from exc
 
+    async def _query(self, connection, sql, params):
+        try:
+            return await db.query(self.runtime, connection, sql, params)
+        except sqlite3.OperationalError as exc:
+            self.telemetry.log(SERVICE, "ERROR", f"database error: {exc}")
+            raise ServiceError(503, "database unavailable") from exc
+
     async def _read_stock(self, connection, sku):
-        row = connection.execute("SELECT stock FROM items WHERE sku = ?", (sku,)).fetchone()
-        await self.runtime.sleep(config.QUERY_MS)
-        if row is None:
+        rows = await self._query(connection, "SELECT stock FROM items WHERE sku = ?", (sku,))
+        if not rows:
             raise ServiceError(404, f"unknown sku: {sku}")
-        return row[0]
+        return rows[0][0]
