@@ -19,7 +19,10 @@ class Inventory:
         with self.telemetry.span(SERVICE, "GET /stock/{sku}", sku=sku):
             connection = await self._connection()
             try:
-                return await self._read_stock(connection, sku)
+                rows = await self._query(connection, "SELECT stock FROM items WHERE lower(sku) = lower(?)", (sku,))
+                if not rows:
+                    raise ServiceError(404, f"unknown sku: {sku}")
+                return rows[0][0]
             finally:
                 self.pool.release(connection)
 
